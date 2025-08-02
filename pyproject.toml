@@ -1,9 +1,13 @@
 [project]
-name = "uv-fastapi-example"
+name = "ai-website-project"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi[standard]>=0.112.1",
+    "fastapi[standard]>=0.115.8",
+    "passlib[bcrypt]>=1.7.4",
+    "pydantic-settings>=2.10.1",
+    "pyjwt>=2.10.1",
+    "sqlmodel>=0.0.24",
 ]
