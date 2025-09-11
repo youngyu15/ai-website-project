@@ -1,7 +1,10 @@
-# app/models.py (Pydantic models)
+# app/schemas.py (Pydantic models)
 from pydantic import BaseModel, EmailStr, HttpUrl, Field
 from typing import Optional, List, Literal
 from datetime import datetime
+
+class ORMBase(BaseModel):
+    model_config = {"from_attributes": True}
 
 class AuthResponse(BaseModel):
     access_token: str
@@ -19,7 +22,7 @@ class LoginRequest(SignupRequest):
 class RefreshRequest(BaseModel):
     refresh_token: str
 
-class User(BaseModel):
+class UserBase(BaseModel):
     id: str
     email: EmailStr
     created_at: datetime
@@ -35,7 +38,7 @@ class UploadCreated(BaseModel):
     max_bytes: int
     expires_at: datetime
 
-class Upload(BaseModel):
+class UploadBase(BaseModel):
     file_id: str
     owner_id: str
     content_type: str
@@ -54,7 +57,7 @@ class ClassificationResult(BaseModel):
     confidence: float = Field(ge=0, le=1)
     image_url: Optional[HttpUrl]
 
-class Prediction(BaseModel):
+class PredictionBase(BaseModel):
     id: str
     status: Literal["pending", "processing", "succeeded", "failed"]
     created_at: datetime
@@ -65,7 +68,7 @@ class Prediction(BaseModel):
     error: Optional[dict] = None
 
 class PredictionPage(BaseModel):
-    items: List[Prediction]
+    items: List[PredictionBase]
     next_cursor: Optional[str]
 
 class CreatePredictionRequest(BaseModel):
@@ -75,7 +78,7 @@ class CreatePredictionRequest(BaseModel):
 class CreateShareRequest(BaseModel):
     ttl_seconds: Optional[int] = 86400
 
-class Share(BaseModel):
+class ShareBase(BaseModel):
     share_id: str
     url: HttpUrl
     expires_at: datetime
@@ -85,7 +88,7 @@ class WebhookCreateRequest(BaseModel):
     secret: Optional[str]
     events: List[str] = ["prediction.succeeded", "prediction.failed"]
 
-class Webhook(BaseModel):
+class WebhookBase(BaseModel):
     id: str
     url: HttpUrl
     events: List[str]

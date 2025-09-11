@@ -1,6 +1,6 @@
 # app/routers/auth.py
 from fastapi import APIRouter, status
-from app.models import SignupRequest, LoginRequest, RefreshRequest, AuthResponse
+from app.schemas import SignupRequest, LoginRequest, RefreshRequest, AuthResponse
 
 router = APIRouter()
 
