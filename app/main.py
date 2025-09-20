@@ -1,29 +1,13 @@
-# app/main.py
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
 from app.routers import auth, users, uploads, predictions, shares, webhooks
-from sqlalchemy import event
-from sqlmodel import SQLModel
-from app.db.engine import engine, init_models
-from app.db import models
 
-# Optional: auto-update 'updated_at' before UPDATE on Prediction
-@event.listens_for(models.Prediction, "before_update", propagate=True)
-def _prediction_before_update(mapper, connection, target):
-    target.updated_at = target.updated_at.__class__.utcnow()
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # In production use Alembic; this is handy for local dev
-    # await init_models()
-    pass
-
-app = FastAPI(title="AI Website API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title=settings.app_name, version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins or ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

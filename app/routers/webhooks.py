@@ -1,28 +1,20 @@
-# app/routers/webhooks.py
-from fastapi import APIRouter, Depends, status
-from uuid import uuid4
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.deps import get_current_user
-from app.schemas import WebhookCreateRequest, WebhookBase
-from app.store import webhooks, now
+from app.schemas import WebhookCreateRequest, WebhookOut
+from app.repositories.webhooks import create_webhook, list_webhooks
+from app.core.security import hash_password
+from app.db.engine import get_session
 
 router = APIRouter()
 
-@router.post("/endpoints", response_model=WebhookBase, status_code=status.HTTP_201_CREATED)
-def create_webhook(body: WebhookCreateRequest, user=Depends(get_current_user)):
-    wid = f"wh_{uuid4().hex}"
-    webhooks[wid] = {
-        "id": wid,
-        "url": body.url,
-        "events": body.events,
-        "created_at": now(),
-        "owner_id": user.id,
-    }
-    return WebhookBase(**{k: v for k, v in webhooks[wid].items() if k != "owner_id"})
+@router.post("/endpoints", response_model=WebhookOut, status_code=201)
+async def create_webhook_endpoint(body: WebhookCreateRequest, user = Depends(get_current_user), db: AsyncSession = Depends(get_session)):
+    secret_hash = hash_password(body.secret) if body.secret else None
+    wh = await create_webhook(db, owner_id=user.id, url=body.url, events=body.events, secret_hash=secret_hash)
+    return WebhookOut.model_validate(wh, from_attributes=True)
 
-@router.get("/endpoints", response_model=list[WebhookBase])
-def list_webhooks(user=Depends(get_current_user)):
-    res = []
-    for wh in webhooks.values():
-        if wh["owner_id"] == user.id:
-            res.append(WebhookBase(**{k: v for k, v in wh.items() if k != "owner_id"}))
-    return res
+@router.get("/endpoints", response_model=list[WebhookOut])
+async def list_webhook_endpoints(user = Depends(get_current_user), db: AsyncSession = Depends(get_session)):
+    hooks = await list_webhooks(db, owner_id=user.id)
+    return [WebhookOut.model_validate(h, from_attributes=True) for h in hooks]

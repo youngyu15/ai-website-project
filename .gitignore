@@ -163,3 +163,5 @@ cython_debug/
 
 # Alembic
 alembic.ini
+
+.DS_Store

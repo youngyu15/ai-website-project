@@ -1,39 +1,30 @@
-# app/routers/shares.py
+from uuid import UUID
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
-from uuid import uuid4
-from datetime import timedelta
-from app.deps import get_current_user, User as DepUser
-from app.schemas import CreateShareRequest, ShareBase, PredictionBase
-from app.store import shares, predictions, now
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.deps import get_current_user
+from app.schemas import CreateShareRequest, ShareOut, PublicPredictionOut
+from app.repositories.shares import create_share, get_share
+from app.repositories.predictions import get_prediction
+from app.db.engine import get_session
 
 router = APIRouter()
 
-@router.post("/{pred_id}/share", response_model=ShareBase, status_code=status.HTTP_201_CREATED)
-def create_share(pred_id: str, body: CreateShareRequest | None = None, current: DepUser = Depends(get_current_user)):
-    rec = predictions.get(pred_id)
-    if not rec or rec["owner_id"] != current.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    share_id = f"shr_{uuid4().hex}"
-    ttl = timedelta(seconds=(body.ttl_seconds if body and body.ttl_seconds else 86400))
-    exp = now() + ttl
-    shares[share_id] = {"pred_id": pred_id, "expires_at": exp}
-    return ShareBase(share_id=share_id, url=f"https://api.example.com/v1/shares/{share_id}", expires_at=exp)
-
-@router.get("/{share_id}", response_model=PredictionBase)
-def get_share(share_id: str):
-    rec = shares.get(share_id)
-    if not rec or rec["expires_at"] < now():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    pred = predictions.get(rec["pred_id"])  # public read of snapshot (here live)
+@router.post("/{pred_id}/share", response_model=ShareOut, status_code=201)
+async def create_share_route(pred_id: UUID, body: CreateShareRequest | None = None, user = Depends(get_current_user), db: AsyncSession = Depends(get_session)):
+    pred = await get_prediction(db, pred_id=pred_id, owner_id=user.id)
     if not pred:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    return PredictionBase(**pred["data"])
+        raise HTTPException(status_code=404)
+    ttl = body.ttl_seconds if body and body.ttl_seconds else 86400
+    share = await create_share(db, prediction_id=pred_id, ttl_seconds=ttl)
+    return ShareOut(share_id=share.public_id, url=f"/v1/shares/{share.public_id}", expires_at=share.expires_at)
 
-@router.delete("/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_share(share_id: str, current: DepUser = Depends(get_current_user)):
-    rec = shares.get(share_id)
-    if not rec:
-        return None
-    # optional: enforce owner check by mapping share->owner via prediction
-    shares.pop(share_id, None)
-    return None
+@router.get("/{public_id}", response_model=PublicPredictionOut, include_in_schema=False)
+async def get_public_share(public_id: str, db: AsyncSession = Depends(get_session)):
+    share = await get_share(db, public_id=public_id)
+    if not share or share.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=404)
+    pred = await get_prediction(db, pred_id=share.prediction_id)
+    if not pred:
+        raise HTTPException(status_code=404)
+    return PublicPredictionOut.model_validate(pred, from_attributes=True)

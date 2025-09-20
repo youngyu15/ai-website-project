@@ -1,86 +1,41 @@
-# app/routers/predictions.py
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
-from typing import Optional, List
-from uuid import uuid4
-from datetime import timedelta
-from app.schemas import (
-    CreatePredictionRequest, PredictionBase, PredictionPage, Stage, ClassificationResult
-)
-from app.deps import get_current_user, User as DepUser
-from app.store import predictions, uploads, now
+import asyncio
+from datetime import datetime
+from uuid import UUID
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.deps import get_current_user
+from app.schemas import CreatePredictionRequest, PredictionOut, PredictionPage
+from app.repositories import predictions as repo
+from app.repositories.uploads import get_upload
+from app.db.engine import get_session, async_session_factory
+from app.services.predictions import run_dummy_pipeline
 
 router = APIRouter()
 
 @router.get("", response_model=PredictionPage)
-def list_predictions(cursor: Optional[str] = None, limit: int = 20, current: DepUser = Depends(get_current_user)):
-    items: List[PredictionBase] = []
-    # naive: return all owned predictions
-    for p in predictions.values():
-        if p["owner_id"] == current.id:
-            items.append(PredictionBase(**p["data"]))
-    return PredictionPage(items=sorted(items, key=lambda x: x.created_at, reverse=True)[:limit], next_cursor=None)
+async def list_predictions(limit: int = 20, cursor: str | None = None, user = Depends(get_current_user), db: AsyncSession = Depends(get_session)):
+    before = datetime.fromisoformat(cursor) if cursor else None
+    items = await repo.list_predictions(db, owner_id=user.id, limit=limit, before=before)
+    return PredictionPage(items=[PredictionOut.model_validate(p, from_attributes=True) for p in items], next_cursor=None)
 
-@router.post("", response_model=PredictionBase, status_code=status.HTTP_202_ACCEPTED)
-def create_prediction(body: CreatePredictionRequest, background: BackgroundTasks, current: DepUser = Depends(get_current_user)):
-    if body.file_id not in uploads:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="file_id not found")
-    pred_id = f"pred_{uuid4().hex}"
-    data = PredictionBase(
-        id=pred_id,
-        status="pending",
-        created_at=now(),
-        updated_at=now(),
-        file_id=body.file_id,
-        stages=[
-            Stage(name="face_detection", status="pending"),
-            Stage(name="classification", status="pending"),
-        ],
-        result=None,
-        error=None,
-    )
-    predictions[pred_id] = {"owner_id": current.id, "data": data.model_dump()}
+@router.post("", response_model=PredictionOut, status_code=status.HTTP_202_ACCEPTED)
+async def create_prediction(body: CreatePredictionRequest, background: BackgroundTasks, user = Depends(get_current_user), db: AsyncSession = Depends(get_session)):
+    up = await get_upload(db, upload_id=body.file_id, owner_id=user.id)
+    if not up:
+        raise HTTPException(status_code=422, detail="file_id not found")
+    pred = await repo.create_prediction(db, owner_id=user.id, file_id=body.file_id)
 
-    background.add_task(_run_pipeline, pred_id)
-    return data
+    def _run_detached(pred_id: UUID):
+        async def _go():
+            async with async_session_factory() as s:
+                await run_dummy_pipeline(s, pred_id=pred_id)
+        asyncio.run(_go())
 
-@router.get("/{pred_id}", response_model=PredictionBase)
-def get_prediction(pred_id: str, current: DepUser = Depends(get_current_user)):
-    rec = predictions.get(pred_id)
-    if not rec or rec["owner_id"] != current.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    return PredictionBase(**rec["data"])
+    background.add_task(_run_detached, pred.id)
 
-# --- background pipeline (fake) ---
-
-def _run_pipeline(pred_id: str):
-    import time
-    rec = predictions[pred_id]
-    data = rec["data"]
-
-    # face detection
-    data["status"] = "processing"
-    data["stages"][0]["status"] = "processing"
-    _persist(pred_id, data)
-    time.sleep(0.5)
-    data["stages"][0]["status"] = "succeeded"
-
-    # classification
-    data["stages"][1]["status"] = "processing"
-    _persist(pred_id, data)
-    time.sleep(0.5)
-
-    # fake result
-    data["stages"][1]["status"] = "succeeded"
-    data["status"] = "succeeded"
-    data["updated_at"] = now()
-    data["result"] = ClassificationResult(
-        face_detected=True,
-        label="cat",
-        confidence=0.98,
-        image_url="https://cdn.example.com/some-thumb.jpg",
-    ).model_dump()
-    _persist(pred_id, data)
-
-
-def _persist(pred_id: str, data: dict):
-    predictions[pred_id]["data"] = data
+@router.get("/{pred_id}", response_model=PredictionOut)
+async def get_prediction(pred_id: UUID, user = Depends(get_current_user), db: AsyncSession = Depends(get_session)):
+    pred = await repo.get_prediction(db, pred_id=pred_id, owner_id=user.id)
+    if not pred:
+        raise HTTPException(status_code=404)
+    return PredictionOut.model_validate(pred, from_attributes=True)

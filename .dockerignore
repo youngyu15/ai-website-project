@@ -1,0 +1,14 @@
+# Ignore host venv
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Git
+.git/
+.gitignore
+
+# OS / editor junk
+.DS_Store
+.vscode/
