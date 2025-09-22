@@ -1,17 +1,12 @@
-# uv-fastapi-example
+# ai-website-project-backend
 
-An example of a [FastAPI](https://github.com/fastapi/fastapi) application managed as a
-[uv](https://github.com/astral-sh/uv) project.
+Backend for my dog/cat-like face classification website.
 
-Based on the [multi-file example](https://fastapi.tiangolo.com/tutorial/bigger-applications/) from
-the FastAPI documentation.
+Models used:
+Face detection: [blazeface](https://www.kaggle.com/models/tensorflow/blazeface/)
+Cat/dog classifier: [sharadnaik01/cat_vs_dog-cnn-classifier](https://www.kaggle.com/models/sharadnaik01/cat_vs_dog-cnn-classifier)
 
 ## License
 
 MIT
 
-<div align="center">
-  <a target="_blank" href="https://astral.sh" style="background:none">
-    <img src="https://raw.githubusercontent.com/astral-sh/uv/main/assets/svg/Astral.svg" alt="Made by Astral">
-  </a>
-</div>
