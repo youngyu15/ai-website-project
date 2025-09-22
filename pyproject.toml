@@ -1,24 +1,19 @@
 [project]
 name = "ai-website-project"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+description = "Monorepo for AI Website: FastAPI API + ML microservices"
 requires-python = ">=3.12"
-dependencies = [
-    "alembic>=1.16.5",
-    "asyncpg>=0.30.0",
-    "fastapi[standard]>=0.115.8",
-    "passlib[bcrypt]>=1.7.4",
-    "sqlmodel>=0.0.24",
-    "python-jose[cryptography]>=3.3",
-    "pydantic>=2.7",
-    "python-multipart>=0.0.9",
-    "redis>=5.0",  # optional later
-    "boto3>=1.34",
+
+[dependency-groups]
+dev = ["ruff>=0.6", "pytest>=8.3", "httpx>=0.27"]
+
+[tool.uv.workspace]
+members = [
+  "apps/api",
+  "services/face-detection",
+  "services/catdog-classifier",
+  "packages/common",
 ]
 
-[project.optional-dependencies]
-dev = ["httpx>=0.27", "pytest>=8.3", "ruff>=0.6"]
-
-[tool.uvicorn]
-factory = false
+[tool.uv]
+environments = ["linux-x86_64-cpython-3.12"]
