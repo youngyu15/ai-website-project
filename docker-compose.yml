@@ -31,5 +31,36 @@ services:
     ports:
       - "8000:8000"
 
+  face-service:
+    build: ./services/face-service
+    image: ai-site/face-service:local
+    ports:
+      - "8010:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 10s
+      timeout: 2s
+      retries: 6
+    restart: unless-stopped
+  
+  catdog-service:
+    build: ./services/catdog-service
+    image: ai-site/catdog-service:local
+    ports:
+      - "8011:8001"
+    volumes:
+      - ./models/catdog/model_v-03.h5:/models/model_v-03.h5:ro
+    environment:
+      - MODEL_PATH=/models/model_v-03.h5
+      # If you know the exact size, set it; otherwise it will infer.
+      # - IMG_SIZE=128
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8001/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    restart: unless-stopped
+
+
 volumes:
   pgdata:

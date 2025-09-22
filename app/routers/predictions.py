@@ -8,7 +8,7 @@ from app.schemas import CreatePredictionRequest, PredictionOut, PredictionPage
 from app.repositories import predictions as repo
 from app.repositories.uploads import get_upload
 from app.db.engine import get_session, async_session_factory
-from app.services.predictions import run_dummy_pipeline
+from app.services.predictions import run_ml_pipeline
 
 router = APIRouter()
 
@@ -28,7 +28,7 @@ async def create_prediction(body: CreatePredictionRequest, background: Backgroun
     def _run_detached(pred_id: UUID):
         async def _go():
             async with async_session_factory() as s:
-                await run_dummy_pipeline(s, pred_id=pred_id)
+                await run_ml_pipeline(s, pred_id=pred_id)
         asyncio.run(_go())
 
     background.add_task(_run_detached, pred.id)
