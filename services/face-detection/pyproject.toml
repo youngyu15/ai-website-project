@@ -10,10 +10,19 @@ dependencies = [
   "pydantic>=2.7",
   "numpy",
   "pillow",
-  "onnxruntime>=1.18",   # adjust if you really use mediapipe/opencv/torch
+  "mediapipe>=0.10",
+  "opencv-python-headless>=4.8",
   "python-multipart>=0.0.9",
   "common==0.1.0",
 ]
 
 [tool.uv.sources]
 common = { workspace = true }
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+# tell hatch which package(s) live under src/
+[tool.hatch.build.targets.wheel]
+packages = ["src/face_detection"]

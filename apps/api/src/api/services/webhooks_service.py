@@ -1,6 +1,6 @@
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.repositories import webhooks as repo
+from api.repositories import webhooks_repo as repo
 
 async def emit_prediction_event(db: AsyncSession, *, owner_id: UUID, prediction_id: UUID, event: str):
     # Lookup user webhooks and log a fake delivery (no HTTP calls yet)

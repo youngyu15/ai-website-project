@@ -1,7 +1,7 @@
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.models import Upload
+from api.db.models import Upload
 
 async def create_upload(db: AsyncSession, *, owner_id: UUID, content_type: str, bytes: int, storage_url: str) -> Upload:
     up = Upload(owner_id=owner_id, content_type=content_type, bytes=bytes, storage_url=storage_url)

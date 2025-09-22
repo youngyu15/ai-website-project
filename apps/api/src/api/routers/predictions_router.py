@@ -3,12 +3,12 @@ from datetime import datetime
 from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.deps import get_current_user
-from app.schemas import CreatePredictionRequest, PredictionOut, PredictionPage
-from app.repositories import predictions as repo
-from app.repositories.uploads import get_upload
-from app.db.engine import get_session, async_session_factory
-from app.services.predictions import run_ml_pipeline
+from packages.common.src.common.schemas.predictions import CreatePredictionRequest, PredictionOut, PredictionPage
+from api.deps import get_current_user
+from api.repositories import predictions_repo as repo
+from api.repositories.uploads_repo import get_upload
+from api.db.base import get_session, async_session_factory
+from api.services.predictions_service import run_ml_pipeline
 
 router = APIRouter()
 

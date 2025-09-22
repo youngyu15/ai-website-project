@@ -3,7 +3,7 @@ from typing import Optional, Sequence
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.models import Prediction, PredictionStatus
+from api.db.models import Prediction, PredictionStatus
 
 async def create_prediction(db: AsyncSession, *, owner_id: UUID, file_id: UUID) -> Prediction:
     pred = Prediction(owner_id=owner_id, file_id=file_id, status=PredictionStatus.pending)

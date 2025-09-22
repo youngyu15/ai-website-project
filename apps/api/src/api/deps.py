@@ -5,9 +5,9 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import decode_token
-from app.db.engine import get_session
-from app.db.models import User
+from api.core.security import decode_token
+from api.db.base import get_session
+from api.db.models import User
 
 security = HTTPBearer(auto_error=False)
 

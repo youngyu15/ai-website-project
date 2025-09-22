@@ -10,10 +10,18 @@ dependencies = [
   "pydantic>=2.7",
   "numpy",
   "pillow",
-  "onnxruntime>=1.18",   # or torch/tf if that's what you run
+  "tensorflow>=2.17,<3.0",
   "python-multipart>=0.0.9",
   "common==0.1.0",
 ]
 
 [tool.uv.sources]
 common = { workspace = true }
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+# tell hatch which package(s) live under src/
+[tool.hatch.build.targets.wheel]
+packages = ["src/catdog_classifier"]

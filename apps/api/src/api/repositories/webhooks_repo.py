@@ -1,7 +1,7 @@
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.models import Webhook, WebhookDelivery
+from api.db.models import Webhook, WebhookDelivery
 
 async def create_webhook(db: AsyncSession, *, owner_id: UUID, url: str, events: list[str], secret_hash: str | None) -> Webhook:
     wh = Webhook(owner_id=owner_id, url=url, events=events, secret_hash=secret_hash)

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.models import Share, Prediction
+from api.db.models import Share, Prediction
 
 async def create_share(db: AsyncSession, *, prediction_id: UUID, ttl_seconds: int) -> Share:
     public_id = f"shr_{uuid4().hex[:20]}"

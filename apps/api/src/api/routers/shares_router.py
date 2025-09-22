@@ -2,11 +2,12 @@ from uuid import UUID
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.deps import get_current_user
-from app.schemas import CreateShareRequest, ShareOut, PublicPredictionOut
-from app.repositories.shares import create_share, get_share
-from app.repositories.predictions import get_prediction
-from app.db.engine import get_session
+from api.schemas import CreateShareRequest, ShareOut
+from packages.common.src.common.schemas.predictions import PublicPredictionOut
+from api.deps import get_current_user
+from api.repositories.shares_repo import create_share, get_share
+from api.repositories.predictions_repo import get_prediction
+from api.db.base import get_session
 
 router = APIRouter()
 

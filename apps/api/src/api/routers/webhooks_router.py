@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.deps import get_current_user
-from app.schemas import WebhookCreateRequest, WebhookOut
-from app.repositories.webhooks import create_webhook, list_webhooks
-from app.core.security import hash_password
-from app.db.engine import get_session
+from api.schemas import WebhookCreateRequest, WebhookOut
+from api.deps import get_current_user
+from api.repositories.webhooks_repo import create_webhook, list_webhooks
+from api.core.security import hash_password
+from api.db.base import get_session
 
 router = APIRouter()
 

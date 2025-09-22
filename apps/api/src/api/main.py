@@ -1,9 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
-from app.routers import auth, users, uploads, predictions, shares, webhooks
+from api.settings import settings
+from api.routers import auth_router, users_router, uploads_router, predictions_router, shares_router, webhooks_router
 
 app = FastAPI(title=settings.app_name, version="1.0.0")
+
+@app.get("/health")
+def health():
+    return {"status": True}
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,9 +17,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, prefix="/v1/auth", tags=["auth"])
-app.include_router(users.router, prefix="/v1/users", tags=["users"])
-app.include_router(uploads.router, prefix="/v1/uploads", tags=["uploads"])
-app.include_router(predictions.router, prefix="/v1/predictions", tags=["predictions"])
-app.include_router(shares.router, prefix="/v1/shares", tags=["shares"])
-app.include_router(webhooks.router, prefix="/v1/webhooks", tags=["webhooks"])
+app.include_router(auth_router.router, prefix="/v1/auth", tags=["auth"])
+app.include_router(users_router.router, prefix="/v1/users", tags=["users"])
+app.include_router(uploads_router.router, prefix="/v1/uploads", tags=["uploads"])
+app.include_router(predictions_router.router, prefix="/v1/predictions", tags=["predictions"])
+app.include_router(shares_router.router, prefix="/v1/shares", tags=["shares"])
+app.include_router(webhooks_router.router, prefix="/v1/webhooks", tags=["webhooks"])

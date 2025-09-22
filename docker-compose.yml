@@ -1,66 +1,75 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:16-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-ai_website_project}
-    ports:
-      - "5433:5433"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  face-detection:
+    build:
+      context: .
+      dockerfile: docker/face-detection.Dockerfile
+    environment:
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8001/health', timeout=2).getcode()==200 else sys.exit(1)\""]
+      interval: 5s
+      timeout: 2s
+      retries: 30
+    ports:
+      - "8001:8001"
+
+  catdog-classifier:
+    build:
+      context: .
+      dockerfile: docker/catdog-classifier.Dockerfile
+    environment:
+      CATDOG_MODEL_PATH: ${CATDOG_MODEL_PATH:-/models/model_v-03.h5}
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./services/catdog-classifier/src/catdog_classifier/models:/models:ro
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8002/healthz', timeout=2).getcode()==200 else sys.exit(1)\""]
+      interval: 5s
+      timeout: 2s
+      retries: 30
+    ports:
+      - "8002:8002"
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
     env_file:
       - .env
     environment:
-      # Ensure your API binds to the same service name "db"
-      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-ai_website_project}?ssl=false
-      HOST: 0.0.0.0
-      PORT: "8000"
-      RUN_MIGRATIONS: "1"
+      DATABASE_URL: ${DATABASE_URL}
+      FACE_URL: ${FACE_URL:-http://face-detection:8001}
+      CLASSIFIER_URL: ${CLASSIFIER_URL:-http://catdog-classifier:8002}
+      PYTHONUNBUFFERED: "1"
     depends_on:
       db:
         condition: service_healthy
+      face-detection:
+        condition: service_healthy
+      catdog-classifier:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health', timeout=2).getcode()==200 else sys.exit(1)\""]
+      interval: 5s
+      timeout: 2s
+      retries: 30
     ports:
       - "8000:8000"
 
-  face-service:
-    build: ./services/face-service
-    image: ai-site/face-service:local
-    ports:
-      - "8010:8000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
-      interval: 10s
-      timeout: 2s
-      retries: 6
-    restart: unless-stopped
-  
-  catdog-service:
-    build: ./services/catdog-service
-    image: ai-site/catdog-service:local
-    ports:
-      - "8011:8001"
-    volumes:
-      - ./models/catdog/model_v-03.h5:/models/model_v-03.h5:ro
-    environment:
-      - MODEL_PATH=/models/model_v-03.h5
-      # If you know the exact size, set it; otherwise it will infer.
-      # - IMG_SIZE=128
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8001/healthz"]
-      interval: 10s
-      timeout: 3s
-      retries: 6
-    restart: unless-stopped
-
-
 volumes:
-  pgdata:
+  db-data:

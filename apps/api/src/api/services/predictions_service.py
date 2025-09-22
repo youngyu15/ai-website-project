@@ -5,9 +5,9 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import repo  # your repository helpers
-from app.clients.ml_services import detect_faces_from_bytes, classify_catdog_from_bytes
-from app.services.storage import get_object_bytes  # you already have S3 helper that returns bytes
+from packages.common.src.common.http.clients import detect_faces_from_bytes, classify_catdog_from_bytes
+from api.repositories import predictions_repo  # your repository helpers
+from api.services.storage import get_object_bytes  # you already have S3 helper that returns bytes
 
 # If you have an enum for status, adapt these to your enum names.
 STATUS_QUEUED = "queued"
@@ -48,7 +48,7 @@ async def run_ml_pipeline(db: AsyncSession, *, pred_id: UUID) -> None:
     Orchestrates: fetch file -> face detection -> (if any face) cat/dog classification.
     Updates DB after each stage.
     """
-    pred = await repo.get_prediction(db, pred_id=pred_id)
+    pred = await predictions_repo.get_prediction(db, pred_id=pred_id)
     if not pred:
         return
 

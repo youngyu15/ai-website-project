@@ -4,7 +4,7 @@ from jose import jwt
 from passlib.context import CryptContext
 from uuid import UUID
 
-from app.core.config import settings
+from api.settings import settings
 
 ALGORITHM = "HS256"
 _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 import boto3
 from botocore.config import Config
-from app.core.config import settings
+from api.settings import settings
 
 _s3 = boto3.client(
     "s3",

@@ -1,25 +1,46 @@
-# services/catdog-service/app/main.py
+# services/catdog-classifier/src/catdog_classifier/main.py
+from __future__ import annotations
+
 import os
+from pathlib import Path
 from typing import Dict, Any, Tuple
+
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from PIL import Image
 import numpy as np
 import io
-import tensorflow as tf
-from tensorflow import keras
 
-MODEL_PATH = os.getenv("MODEL_PATH", "/models/model.h5")
+import keras
+
+# Resolve the default model **relative to this file**, not the CWD
+_THIS_DIR = Path(__file__).resolve().parent
+
+MODEL_PATH = Path(_THIS_DIR, os.getenv("CATDOG_MODEL_PATH", "models/model_v-03.h5"))
 IMG_SIZE_ENV = os.getenv("IMG_SIZE")  # optional override, e.g. "128"
 
 app = FastAPI(title="CatDog Classifier Service", version="1.2.0")
 
-# --- Load H5 ---------------------------------------------------------------
-if not (os.path.isfile(MODEL_PATH) and MODEL_PATH.endswith((".h5", ".keras"))):
+# --- Load model ------------------------------------------------------------
+print("CWD:", os.getcwd())
+print("Resolved model path:", MODEL_PATH)
+
+if not (MODEL_PATH.suffix in {".h5", ".keras"} and MODEL_PATH.is_file()):
+    # Helpful diagnostics if things go wrong
+    maybe_models_dir = MODEL_PATH.parent
+    nearby = []
+    if maybe_models_dir.exists():
+        nearby = [p.name for p in maybe_models_dir.iterdir()]
     raise RuntimeError(
-        f"MODEL_PATH must be an .h5/.keras file. Got: {MODEL_PATH}"
+        "Model file not found or wrong extension.\n"
+        f"Expected: {MODEL_PATH}\n"
+        f"Exists?  {MODEL_PATH.exists()}\n"
+        f"Parent:  {maybe_models_dir}\n"
+        f"Parent contents: {nearby}\n"
+        "Tip: set CATDOG_MODEL_PATH to an absolute path, "
+        "or place the model in src/catdog_classifier/models/."
     )
 
-model = keras.models.load_model(MODEL_PATH, compile=False)
+model = keras.models.load_model(str(MODEL_PATH), compile=False)
 
 def infer_img_size() -> Tuple[int, int]:
     if IMG_SIZE_ENV:
@@ -34,7 +55,7 @@ H, W = infer_img_size()
 
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "model_path": MODEL_PATH, "img_size": [H, W]}
+    return {"ok": True, "model_path": str(MODEL_PATH), "img_size": [H, W]}
 
 # --- Pre/post --------------------------------------------------------------
 def _from_upload(upload: UploadFile) -> Image.Image:
@@ -45,7 +66,7 @@ def _from_upload(upload: UploadFile) -> Image.Image:
 
 def _preprocess(img: Image.Image) -> np.ndarray:
     img = img.convert("RGB").resize((W, H))
-    arr = np.asarray(img).astype("float32") / 255.0
+    arr = np.asarray(img, dtype=np.float32) / 255.0
     return np.expand_dims(arr, 0)  # [1, H, W, 3]
 
 # --- Predict ---------------------------------------------------------------

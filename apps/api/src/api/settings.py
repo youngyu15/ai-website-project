@@ -1,41 +1,56 @@
-# app/core/config.py
-from pydantic import BaseModel, field_validator
-from typing import List
-import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, SecretStr, model_validator
+from typing import List, Literal
+import json
 
-class Settings(BaseModel):
-    app_name: str = os.getenv("APP_NAME", "AI Website API")
-    app_env: str = os.getenv("APP_ENV", "dev")
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
 
-    secret_key: str = os.getenv("SECRET_KEY", "change-me")
-    access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
-    refresh_token_expire_days: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+    # Non-secret with safe defaults
+    app_name: str = "AI Website API"
+    app_env: Literal["dev","staging","prod"] = "dev"
+
+    # REQUIRED secrets (no defaults)
+    secret_key: SecretStr = Field(..., description="JWT signing key")
+    database_url: str = Field(..., description="async SQLAlchemy URL")
+
+    # S3 (bucket required, endpoint optional)
+    s3_bucket: str = Field(...)
+    aws_region: str = "us-east-1"
+    s3_endpoint_url: str | None = None
+
+    # Service URLs (default for dev; can override with env)
+    face_url: str = "http://face-detection:8001"
+    classifier_url: str = "http://catdog-classifier:8002"
+
+    max_upload_bytes: int = 10 * 1024 * 1024
+    webhook_signature_header: str = "X-Webhook-Signature"
 
     cors_origins: List[str] = []
-
-    database_url: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_website",
+    cors_origins_raw: str | None = Field(
+        default=None,
+        validation_alias="CORS_ORIGINS",  # read this env var into the raw field
     )
 
-    # S3
-    s3_bucket: str = os.getenv("S3_BUCKET", "your-bucket")
-    aws_region: str = os.getenv("AWS_REGION", "us-east-1")
-    s3_endpoint_url: str | None = os.getenv("S3_ENDPOINT_URL")
+    @model_validator(mode="after")
+    def _normalize_cors(self):
+        s = (self.cors_origins_raw or "").strip()
+        if not s:
+            self.cors_origins = []
+            return self
 
-    max_upload_bytes: int = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+        # Allow JSON list OR comma-separated string
+        if s.startswith("["):
+            try:
+                arr = json.loads(s)
+                if isinstance(arr, list):
+                    self.cors_origins = [str(i).strip() for i in arr if str(i).strip()]
+                    return self
+            except Exception:
+                # fall through to CSV parsing
+                pass
 
-    webhook_signature_header: str = os.getenv(
-        "WEBHOOK_SIGNATURE_HEADER", "X-Webhook-Signature"
-    )
-
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors(cls, v):
-        if not v:
-            v = os.getenv("CORS_ORIGINS", "")
-        if isinstance(v, str):
-            return [i.strip() for i in v.split(",") if i.strip()]
-        return v
+        self.cors_origins = [part.strip() for part in s.split(",") if part.strip()]
+        return self
 
 settings = Settings()

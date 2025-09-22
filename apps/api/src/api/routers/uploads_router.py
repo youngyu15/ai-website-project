@@ -2,12 +2,12 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.config import settings
-from app.deps import get_current_user
-from app.schemas import CreateUploadRequest, UploadCreated, UploadOut
-from app.services.uploads import create_presigned_upload
-from app.repositories.uploads import create_upload, get_upload
-from app.db.engine import get_session
+from packages.common.src.common.schemas.uploads import CreateUploadRequest, UploadCreated, UploadOut
+from api.settings import settings
+from api.deps import get_current_user
+from api.services.uploads_service import create_presigned_upload
+from api.repositories.uploads_repo import create_upload, get_upload
+from api.db.base import get_session
 
 router = APIRouter()
 
