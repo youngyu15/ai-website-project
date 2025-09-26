@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional, Sequence
+from typing import Sequence
 from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,14 +12,14 @@ async def create_prediction(db: AsyncSession, *, owner_id: UUID, file_id: UUID) 
     await db.refresh(pred)
     return pred
 
-async def get_prediction(db: AsyncSession, *, pred_id: UUID, owner_id: Optional[UUID] = None) -> Prediction | None:
+async def get_prediction(db: AsyncSession, *, pred_id: UUID, owner_id: UUID | None = None) -> Prediction | None:
     stmt = select(Prediction).where(Prediction.id == pred_id)
     if owner_id:
         stmt = stmt.where(Prediction.owner_id == owner_id)
     res = await db.execute(stmt)
     return res.scalar_one_or_none()
 
-async def list_predictions(db: AsyncSession, *, owner_id: UUID, limit: int = 20, before: Optional[datetime] = None) -> Sequence[Prediction]:
+async def list_predictions(db: AsyncSession, *, owner_id: UUID, limit: int = 20, before: datetime | None = None) -> Sequence[Prediction]:
     stmt = select(Prediction).where(Prediction.owner_id == owner_id)
     if before:
         stmt = stmt.where(Prediction.created_at < before)

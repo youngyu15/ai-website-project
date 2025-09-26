@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,11 +22,11 @@ async def _mark(
     db: AsyncSession,
     pred,
     *,
-    status: Optional[str] = None,
-    stages: Optional[list] = None,
-    result: Optional[Dict[str, Any]] = None,
-    label: Optional[str] = None,
-    confidence: Optional[float] = None,
+    status: str | None = None,
+    stages: list | None = None,
+    result: Dict[str, Any] | None = None,
+    label: str | None = None,
+    confidence: float | None = None,
 ):
     if status is not None:
         pred.status = status

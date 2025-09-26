@@ -12,3 +12,6 @@ __pycache__/
 # OS / editor junk
 .DS_Store
 .vscode/
+
+# test scripts
+e2e_test.py

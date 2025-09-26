@@ -17,9 +17,9 @@ class UploadCreated(BaseModel):
     expires_at: datetime
 
 class UploadOut(ORMBase):
-    id: UUID = Field(alias="file_id")
+    file_id: UUID = Field(alias="id")
     owner_id: UUID
     content_type: str
     bytes: int
-    storage_url: HttpUrl
+    storage_url: str
     created_at: datetime

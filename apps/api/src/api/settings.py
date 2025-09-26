@@ -13,11 +13,15 @@ class Settings(BaseSettings):
     # REQUIRED secrets (no defaults)
     secret_key: SecretStr = Field(..., description="JWT signing key")
     database_url: str = Field(..., description="async SQLAlchemy URL")
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
 
     # S3 (bucket required, endpoint optional)
     s3_bucket: str = Field(...)
     aws_region: str = "us-east-1"
     s3_endpoint_url: str | None = None
+    aws_access_key_id: str = Field(..., description="S3 access key")
+    aws_secret_access_key: SecretStr = Field(..., description="S3 secret access key")
 
     # Service URLs (default for dev; can override with env)
     face_url: str = "http://face-detection:8001"

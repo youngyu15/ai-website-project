@@ -1,4 +1,7 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class ORMBase(BaseModel):
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(
+        from_attributes=True,
+        use_enum_values=True,   # <-- key line
+    )

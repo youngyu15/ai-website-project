@@ -21,6 +21,5 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_models() -> None:
     # Only for local dev; prefer Alembic in real use
-    from api.db import models  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)

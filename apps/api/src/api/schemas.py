@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import List, Literal
 from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, HttpUrl
 from packages.common.src.common.schemas.base import ORMBase
@@ -30,7 +30,7 @@ class UserOut(ORMBase):
 
 # Shares
 class CreateShareRequest(BaseModel):
-    ttl_seconds: Optional[int] = Field(default=86400, ge=60, le=604800)
+    ttl_seconds: int | None = Field(default=86400, ge=60, le=604800)
 
 class ShareOut(ORMBase):
     share_id: str = Field(alias="public_id")
@@ -40,7 +40,7 @@ class ShareOut(ORMBase):
 # Webhooks
 class WebhookCreateRequest(BaseModel):
     url: HttpUrl
-    secret: Optional[str] = None
+    secret: str | None = None
     events: List[Literal["prediction.succeeded", "prediction.failed"]] = [
         "prediction.succeeded", "prediction.failed"
     ]

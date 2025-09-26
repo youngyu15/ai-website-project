@@ -1,27 +1,33 @@
 from __future__ import annotations
 from datetime import datetime
-from typing import List, Literal, Optional
+from enum import Enum
+from typing import List, Literal
 from uuid import UUID
 from pydantic import BaseModel, Field, HttpUrl
 from common.schemas.base import ORMBase
 
-PredictionStatus = Literal["pending", "processing", "succeeded", "failed"]
 Label = Literal["cat", "dog"]
+
+class PredictionStatus(str, Enum):
+    pending = "pending"
+    processing = "processing"
+    succeeded = "succeeded"
+    failed = "failed"
 
 class Stage(BaseModel):
     name: Literal["face_detection", "classification"]
     status: PredictionStatus
-    result: Optional[dict] = None
+    result: dict | None = None
 
 class ClassificationResult(BaseModel):
     face_detected: bool
     label: Label
     confidence: float = Field(ge=0.0, le=1.0)
-    image_url: Optional[HttpUrl] = None
+    image_url: HttpUrl | None = None
 
 class CreatePredictionRequest(BaseModel):
     file_id: UUID
-    idempotency_key: Optional[str] = None
+    idempotency_key: str | None = None
 
 class PredictionOut(ORMBase):
     id: UUID
@@ -29,15 +35,15 @@ class PredictionOut(ORMBase):
     created_at: datetime
     updated_at: datetime
     file_id: UUID
-    stages: Optional[List[Stage]] = None
-    result: Optional[ClassificationResult] = None
-    error: Optional[dict] = None
-    label: Optional[Label] = None
-    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    stages: List[Stage] | None = None
+    result: ClassificationResult | None = None
+    error: dict | None = None
+    label: Label | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
 
 class PredictionPage(BaseModel):
     items: List[PredictionOut]
-    next_cursor: Optional[str] = None
+    next_cursor: str | None = None
 
 class PublicPredictionOut(PredictionOut):
     pass
