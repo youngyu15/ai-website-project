@@ -34,7 +34,8 @@ class CreateShareRequest(BaseModel):
 
 class ShareOut(ORMBase):
     share_id: str = Field(alias="public_id")
-    url: HttpUrl
+    api_url: str
+    public_url: str
     expires_at: datetime
 
 # Webhooks

@@ -7,4 +7,4 @@ COPY packages/common/pyproject.toml packages/common/pyproject.toml
 COPY . .
 RUN uv sync --frozen --no-dev --package api
 EXPOSE 8000
-CMD ["uv","run","--package","api","uvicorn","api.main:app","--host","0.0.0.0","--port","8000"]
+CMD ["uv","run","--package","api","uvicorn","api.main:app","--log-level","debug","--host","0.0.0.0","--port","8000"]

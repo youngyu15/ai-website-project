@@ -1,6 +1,6 @@
 # app/routers/uploads.py
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from packages.common.src.common.schemas.uploads import CreateUploadRequest, UploadCreated, UploadOut
 from api.settings import settings
@@ -8,8 +8,13 @@ from api.deps import get_current_user
 from api.services.uploads_service import create_presigned_upload
 from api.repositories.uploads_repo import create_upload, get_upload
 from api.db.base import get_session
+from uuid import uuid4
+from pathlib import Path
+import shutil
 
 router = APIRouter()
+UPLOAD_DIR = Path("./var/uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("", response_model=UploadCreated, status_code=201)
 async def create_upload_route(
@@ -56,3 +61,36 @@ async def get_upload_route(
     if not up:
         raise HTTPException(status_code=404)
     return UploadOut.model_validate(up, from_attributes=True)
+
+@router.post("/dev-direct", response_model=UploadCreated, status_code=201)
+async def dev_direct_upload(
+    file: UploadFile = File(...),
+    user = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session)):
+
+    allowed_ext = {".jpg",".jpeg",".png",".gif",".webp"}
+
+    ext = Path(file.filename or "").suffix.lower()
+    if not (file.content_type.startswith("image/") or ext in allowed_ext):
+        raise HTTPException(400, "Only images are allowed")
+    fid = f"{uuid4()}"
+    ext = (Path(file.filename).suffix or ".bin")[:10]
+    dest = UPLOAD_DIR / f"{fid}{ext}"
+    with dest.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    up = await create_upload(
+        db,
+        owner_id=user.id,
+        content_type=ext,
+        bytes=0,
+        storage_url=str(dest),  # set after we have up.id
+    )
+
+    return UploadCreated(
+        file_id=up.id,
+        upload_url=str(dest),
+        content_type=file.content_type,
+        max_bytes=settings.max_upload_bytes,
+        expires_at=settings.access_token_expire_minutes * 60,
+    )

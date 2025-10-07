@@ -11,7 +11,7 @@ class CreateUploadRequest(BaseModel):
 
 class UploadCreated(BaseModel):
     file_id: UUID
-    upload_url: HttpUrl
+    upload_url: str
     content_type: str
     max_bytes: int
     expires_at: datetime

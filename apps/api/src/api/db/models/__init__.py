@@ -3,8 +3,9 @@ from enum import Enum
 from uuid import UUID, uuid4
 from typing import List
 
-from sqlalchemy import Index, UniqueConstraint, Column, String, DateTime, func
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+from sqlalchemy import Index, UniqueConstraint, Column, String, DateTime, func, text
+from sqlalchemy.ext.mutable import MutableDict
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY, UUID as PG_UUID
 from sqlmodel import Field, Relationship, SQLModel
 
 def utcnow() -> datetime:
@@ -16,6 +17,10 @@ class PredictionStatus(str, Enum):
     processing = "processing"
     succeeded = "succeeded"
     failed = "failed"
+
+class StageName(str, Enum):
+    face_detection = "face_detection"
+    classification = "classification"
 
 # Users & tokens
 class User(SQLModel, table=True):
@@ -70,7 +75,14 @@ class Prediction(SQLModel, table=True):
 
     status: PredictionStatus = Field(default=PredictionStatus.pending, index=True)
 
-    stages: dict | None = Field(default=None, sa_column=Column(JSONB))
+    stages: dict[str, dict] = Field(
+        default_factory=dict,
+        sa_column=Column(
+            MutableDict.as_mutable(JSONB),
+            nullable=False,
+            server_default=text("'{}'::jsonb"),
+        ),
+    )
     result: dict | None = Field(default=None, sa_column=Column(JSONB))
     error: dict | None = Field(default=None, sa_column=Column(JSONB))
 

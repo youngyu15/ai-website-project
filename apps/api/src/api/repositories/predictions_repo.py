@@ -5,6 +5,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from api.db.models import Prediction, PredictionStatus
 
+DEFAULT_STAGES = {
+    "face_detection": {"name": "face_detection", "status": "pending", "result": None},
+    "classification": {"name": "classification", "status": "pending", "result": None},
+}
+
 async def create_prediction(db: AsyncSession, *, owner_id: UUID, file_id: UUID) -> Prediction:
     pred = Prediction(owner_id=owner_id, file_id=file_id, status=PredictionStatus.pending)
     db.add(pred)
@@ -27,12 +32,34 @@ async def list_predictions(db: AsyncSession, *, owner_id: UUID, limit: int = 20,
     res = await db.execute(stmt)
     return res.scalars().all()
 
-async def mark_succeeded(db: AsyncSession, pred: Prediction, *, result: dict, label: str, confidence: float) -> Prediction:
+async def update_stage(db: AsyncSession, pred: Prediction, *, name: str, status: str, result: dict | None = None) -> Prediction:
+    stages = dict(pred.stages or {})
+    if name not in stages:
+        stages[name] = DEFAULT_STAGES[name] if name in DEFAULT_STAGES else {
+            "name": name, "status": "pending", "result": None
+        }
+
+    prev = dict(stages[name] or {})
+    new_stage = {**prev, "name": name, "status": status, "result": result}
+    stages[name] = new_stage
+
+    pred.stages = stages
+
+    pred.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(pred)
+    return pred
+
+async def mark_processing(db: AsyncSession, pred: Prediction) -> Prediction:
+    pred.status = PredictionStatus.processing
+    pred.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(pred)
+    return pred
+
+async def mark_succeeded(db: AsyncSession, pred: Prediction, *, result: dict) -> Prediction:
     pred.status = PredictionStatus.succeeded
     pred.result = result
-    pred.error = None
-    pred.label = label
-    pred.confidence = confidence
     pred.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(pred)

@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.schemas import CreateShareRequest, ShareOut
 from packages.common.src.common.schemas.predictions import PublicPredictionOut
 from api.deps import get_current_user
-from api.repositories.shares_repo import create_share, get_share
+from api.settings import settings
+from api.repositories.shares_repo import create_share, get_share, get_active_share_for_prediction
 from api.repositories.predictions_repo import get_prediction
 from api.db.base import get_session
 
@@ -16,9 +17,24 @@ async def create_share_route(pred_id: UUID, body: CreateShareRequest | None = No
     pred = await get_prediction(db, pred_id=pred_id, owner_id=user.id)
     if not pred:
         raise HTTPException(status_code=404)
-    ttl = body.ttl_seconds if body and body.ttl_seconds else 86400
-    share = await create_share(db, prediction_id=pred_id, ttl_seconds=ttl)
-    return ShareOut(share_id=share.public_id, url=f"/v1/shares/{share.public_id}", expires_at=share.expires_at)
+
+    # reuse valid share if it exists
+    existing = await get_active_share_for_prediction(db, prediction_id=pred_id)
+    if existing:
+        share = existing
+    else:
+        ttl = body.ttl_seconds if body and body.ttl_seconds else 86400
+        share = await create_share(db, prediction_id=pred_id, ttl_seconds=ttl)
+
+    api_url = f"{settings.public_api_base.rstrip('/')}/v1/shares/{share.public_id}"
+    public_url = f"{settings.public_base_url.rstrip('/')}/share/{share.public_id}"  # frontend route
+
+    return ShareOut(
+        share_id=share.public_id,
+        api_url=api_url,
+        public_url=public_url,
+        expires_at=share.expires_at,
+    )
 
 @router.get("/{public_id}", response_model=PublicPredictionOut, include_in_schema=False)
 async def get_public_share(public_id: str, db: AsyncSession = Depends(get_session)):

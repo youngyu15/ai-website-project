@@ -1,7 +1,11 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, model_validator, HttpUrl
 from typing import List, Literal
 import json
+
+DEBUG = os.getenv("DEBUG", "false").lower()
+DEV_USER_ID = os.getenv("DEV_USER_ID", "dev@example.com")
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
@@ -35,6 +39,9 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="CORS_ORIGINS",  # read this env var into the raw field
     )
+
+    public_base_url: str
+    public_api_base: str
 
     @model_validator(mode="after")
     def _normalize_cors(self):
